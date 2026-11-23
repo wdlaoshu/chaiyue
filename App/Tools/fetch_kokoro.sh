@@ -1,14 +1,29 @@
 #!/usr/bin/env bash
 # 下载本地神经语音所需的 sherpa-onnx iOS 框架（编译用），并生成放到服务器上的 Kokoro 语音包
 # 语音包输出到 dist/kokoro-v1.1/（含 manifest.json），整个目录上传到 LocalVoiceStore.baseURL 对应位置
-# 用法：App/Tools/fetch_kokoro.sh [缓存目录]
+# 用法：App/Tools/fetch_kokoro.sh [--frameworks-only] [缓存目录]
+#   --frameworks-only  只下载编译用的两个 iOS 框架，不下载 Kokoro 模型、不生成语音包（CI 编译用）
 set -euo pipefail
 
+frameworks_only=0
+cache=""
+for arg in "$@"; do
+  case "$arg" in
+    --frameworks-only) frameworks_only=1 ;;
+    -h|--help) sed -n '2,5p' "$0"; exit 0 ;;
+    -*) echo "未知参数：$arg" >&2; exit 2 ;;
+    *)
+      if [ -n "$cache" ]; then echo "多余的参数：$arg" >&2; exit 2; fi
+      cache="$arg"
+      ;;
+  esac
+done
+cache="${cache:-${TMPDIR:-/tmp}/chaiyue-kokoro}"
+
 root="$(cd "$(dirname "$0")/../.." && pwd)"
-cache="${1:-${TMPDIR:-/tmp}/chaiyue-kokoro}"
 frameworks="$root/Packages/SherpaTTS/Frameworks"
 model="$root/dist/kokoro-v1.1"
-mkdir -p "$cache" "$frameworks" "$model"
+mkdir -p "$cache" "$frameworks"
 
 sherpa_url="https://github.com/k2-fsa/sherpa-onnx/releases/download/xcframework/sherpa-onnx-v2.0.1-ios-static.xcframework.zip"
 sherpa_sum="88aa569f71b7903e0bbdfbe6e2e114b3b95862b1ef0759eea3024f82926d7374"
@@ -19,7 +34,7 @@ model_url="https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/ko
 
 fetch() {
   local url=$1 file=$2
-  [ -f "$cache/$file" ] || curl -L --fail -o "$cache/$file" "$url"
+  [ -f "$cache/$file" ] || curl -L --fail --retry 3 --retry-delay 2 -o "$cache/$file" "$url"
 }
 
 check() {
@@ -34,11 +49,18 @@ ort_zip=$(basename "$ort_url")
 model_tar=$(basename "$model_url")
 fetch "$sherpa_url" "$sherpa_zip" && check "$sherpa_zip" "$sherpa_sum"
 fetch "$ort_url" "$ort_zip" && check "$ort_zip" "$ort_sum"
-fetch "$model_url" "$model_tar"
+if [ "$frameworks_only" -eq 0 ]; then
+  fetch "$model_url" "$model_tar"
+fi
 
 rm -rf "$frameworks/sherpa-onnx.xcframework" "$frameworks/onnxruntime.xcframework"
 unzip -q "$cache/$sherpa_zip" -d "$frameworks"
 unzip -q "$cache/$ort_zip" -d "$frameworks"
+
+if [ "$frameworks_only" -eq 1 ]; then
+  echo "完成（仅框架）：${frameworks}"
+  exit 0
+fi
 
 tmp="$cache/kokoro"
 rm -rf "$tmp" && mkdir -p "$tmp"
