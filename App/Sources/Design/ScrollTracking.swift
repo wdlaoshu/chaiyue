@@ -75,7 +75,7 @@ struct PullIndicator: View {
         .frame(width: 26, height: 26)
         .scaleEffect(0.6 + progress * 0.4)
         .scaleEffect(armed ? 1.18 : 1)
-        .opacity(refreshing ? 1 : min(1, max(0, (pull - 8) / 30)))
+        .opacity(refreshing ? 1 : min(1, max(0, (pull - 8) / CGFloat(30))))
         .offset(y: pull * 0.5 - 22)
         .onChange(of: progress >= 1) { _, reached in
             guard reached, !refreshing else { return }
