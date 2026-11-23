@@ -17,3 +17,7 @@ swift test --package-path Packages/ReaderCore
 ```
 
 使用外部书源样本的集成测试在没有样本时会跳过。仓库不附带第三方书源或用户数据。
+
+## 在 GitHub 上编译发布
+
+推送 `v` 开头的 tag（如 `v0.1.0`）会自动编译未签名 IPA 并发布到 Releases。工作流说明和本机复现命令见 [docs/ci.md](docs/ci.md)。

@@ -54,6 +54,9 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         CODE_SIGN_STYLE: Automatic
         INFOPLIST_FILE: Info.plist
+    # 生成共享 scheme：CI 里 xcodebuild -scheme Chaiyue 才能直接编译/归档
+    scheme:
+      testTargets: []
     info:
       path: Info.plist
       properties:
