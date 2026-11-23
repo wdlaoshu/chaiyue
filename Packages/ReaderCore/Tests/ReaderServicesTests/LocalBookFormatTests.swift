@@ -383,7 +383,7 @@ struct MobiTests {
         let data = palmDB(type: "TEXtREAd", records: [record0, palmDocLiteral(raw)], name: "掌上文本")
         let result = try store.importBook(from: try writeFile("doc.prc", data))
         #expect(result.book.name == "掌上文本")
-        #expect(result.chapters.map(\.title) == ["第一章 开端", "第二章 发展"])
+        #expect(result.chapters.map { $0.title } == ["第一章 开端", "第二章 发展"])
     }
 }
 
@@ -397,7 +397,7 @@ struct UmdTests {
         let id = try #require(LocalBookStore.id(of: book))
         #expect(book.name == "掌上之书" && book.author == "掌柜")
         #expect(try store.resourceData("localbook://\(id)/cover") == coverPNG)
-        #expect(result.chapters.map(\.title) == ["第一章 开端", "第二章 发展"])
+        #expect(result.chapters.map { $0.title } == ["第一章 开端", "第二章 发展"])
         #expect(try store.content(for: book, chapter: result.chapters[0]) == "　　春天来了。")
         #expect(try store.content(for: book, chapter: result.chapters[1]) == "　　夏天到了。")
     }
@@ -517,9 +517,10 @@ struct DocxTests {
     }
 
     @Test func 没有标题样式时按目录规则或长度分章() throws {
-        let lines = ["第一章 开端"] + body().split(separator: "\n").map(String.init) + ["第二章 发展"] + body().split(separator: "\n").map(String.init)
+        let bodyLines = body().split(separator: "\n").map(String.init)
+        let lines = ["第一章 开端"] + bodyLines + ["第二章 发展"] + bodyLines
         let result = try store.importBook(from: try docx("plain.docx", body: lines.map { paragraph($0) }.joined()))
-        #expect(result.chapters.map(\.title) == ["第一章 开端", "第二章 发展"])
+        #expect(result.chapters.map { $0.title } == ["第一章 开端", "第二章 发展"])
         #expect(result.book.name == "plain")
 
         let long = String(repeating: paragraph(String(repeating: "字", count: 99)), count: 120)
@@ -600,7 +601,7 @@ struct MarkupBookTests {
         }
         let text = "第一章 开端\n" + body() + "第二章 发展\n" + body()
         let result = try store.importBook(from: try writeFile("rich.rtf", Data(rtf(text).utf8)))
-        #expect(result.chapters.map(\.title) == ["第一章 开端", "第二章 发展"])
+        #expect(result.chapters.map { $0.title } == ["第一章 开端", "第二章 发展"])
         #expect(try store.content(for: result.book, chapter: result.chapters[1]).hasPrefix("　　风吹过山岗，河水静静流淌。\n"))
         #expect(throws: LocalBookError.corruptFile("无法解析 RTF 文件")) {
             try store.importBook(from: try writeFile("bad.rtf", Data("plain".utf8)))
