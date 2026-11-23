@@ -102,7 +102,7 @@ struct LibraryTests {
         let src = try source("https://img.test", "图", extra: #","coverDecodeJs":"result.map(function(b){return b ^ 15})""#)
 
         let data = try await cache.data(for: "https://img.test/a.jpg", source: src)
-        #expect(Array(data) == [14, 13, 12, 200 ^ 15])
+        #expect(Array(data) == [14, 13, 12, UInt8(200 ^ 15)])
         #expect(try await cache.data(for: "https://img.test/a.jpg", source: src) == data)
         #expect(hits.count("a") == 1)
 
