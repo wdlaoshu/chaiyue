@@ -22,7 +22,7 @@ permissions:
 jobs:
   build:
     name: 编译未签名 IPA
-    runs-on: macos-15
+    runs-on: macos-15-intel
     timeout-minutes: 60
     env:
       HOMEBREW_NO_AUTO_UPDATE: 1
