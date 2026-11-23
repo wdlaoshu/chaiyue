@@ -136,7 +136,8 @@ private final class Messages: @unchecked Sendable {
     func append(_ item: String) { lock.withLock { items.append(item) } }
 }
 
-@Suite("书源交互", .serialized, .timeLimit(.minutes(1)))
+@Suite("书源交互", .serialized, .timeLimit(.minutes(1)),
+       .enabled(if: ProcessInfo.processInfo.environment["CI"] == nil, "CI 上没有可交互的浏览器窗口"))
 @MainActor
 struct PlatformSourceUITests {
     let env = environment()
