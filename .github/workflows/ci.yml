@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: 测试阅读核心
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 选择 Xcode 26
+        run: |
+          set -euo pipefail
+          xcode=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -t. -k2,2n -k3,3n | tail -n 1)
+          if [ -z "$xcode" ]; then
+            echo "::error::运行器上没有 Xcode 26，请调整工作流里的版本要求"
+            exit 1
+          fi
+          echo "使用 $xcode"
+          sudo xcode-select -s "$xcode"
+          xcodebuild -version
+
+      - name: 缓存 SwiftPM 依赖
+        uses: actions/cache@v4
+        with:
+          path: Packages/ReaderCore/.build
+          key: spm-${{ runner.os }}-${{ hashFiles('Packages/ReaderCore/Package.swift') }}
+          restore-keys: spm-${{ runner.os }}-
+
+      - name: swift test
+        run: swift test --package-path Packages/ReaderCore
+
+  app:
+    name: 编译未签名 IPA
+    needs: test
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: 1
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 选择 Xcode 26
+        run: |
+          set -euo pipefail
+          xcode=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -t. -k2,2n -k3,3n | tail -n 1)
+          if [ -z "$xcode" ]; then
+            echo "::error::运行器上没有 Xcode 26，请调整工作流里的版本要求"
+            exit 1
+          fi
+          echo "使用 $xcode"
+          sudo xcode-select -s "$xcode"
+          xcodebuild -version
+
+      - name: 缓存语音框架
+        uses: actions/cache@v4
+        with:
+          path: Packages/SherpaTTS/Frameworks
+          key: sherpa-${{ runner.os }}-${{ hashFiles('App/Tools/fetch_kokoro.sh') }}
+
+      - name: 下载语音框架
+        run: |
+          set -euo pipefail
+          if [ -d Packages/SherpaTTS/Frameworks/sherpa-onnx.xcframework ] &&
+             [ -d Packages/SherpaTTS/Frameworks/onnxruntime.xcframework ]; then
+            echo "框架已命中缓存"
+          else
+            bash App/Tools/fetch_kokoro.sh --frameworks-only
+          fi
+
+      - name: 安装 xcodegen
+        run: brew install xcodegen
+
+      # 和 Release 走同一个脚本，PR 上就能发现打包脚本的问题
+      - name: 归档并打包
+        run: bash App/Tools/build_ipa.sh "" "${GITHUB_RUN_NUMBER}"
+
+      - name: 上传 IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Chaiyue-unsigned-ipa
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
