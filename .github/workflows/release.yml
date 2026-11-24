@@ -65,7 +65,7 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "tag=v$version" >> "$GITHUB_OUTPUT"
           echo "build=${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
-          echo "版本：$version，build：${GITHUB_RUN_NUMBER}"
+          echo "版本：${version}，build：${GITHUB_RUN_NUMBER}"
 
       - name: 缓存语音框架
         uses: actions/cache@v4
